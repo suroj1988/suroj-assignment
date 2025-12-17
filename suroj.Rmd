@@ -1,0 +1,145 @@
+```{r}
+install.packages("corrplot")
+```
+
+
+```{r}
+
+setwd("P:/softwarica/suroj")
+library(ggplot2)
+library(corrplot)
+library(gridExtra)
+
+```
+
+```{r}
+# --- LOAD DATA ---
+data_df <- read.csv("P:/softwarica/suroj/dataset.csv")
+```
+
+```{r}
+
+# Fix column name
+colnames(data_df)[7] <- "bg_plus_1"
+
+```
+
+```{r}
+cat("=== Initial Data Check ===\n")
+cat("Total rows:", nrow(data_df), "\n")
+cat("Missing values per column:\n")
+print(colSums(is.na(data_df)))
+```
+
+```{r}
+
+# --- HANDLE MISSING VALUES ---
+# Impute hr_mean with mean of existing values
+missing_hr <- sum(is.na(data_df$hr_mean))
+cat("\nMissing hr_mean values:", missing_hr, "\n")
+
+```
+
+```{r}
+if(missing_hr > 0) {
+  hr_mean_value <- mean(data_df$hr_mean, na.rm = TRUE)
+  data_df$hr_mean[is.na(data_df$hr_mean)] <- hr_mean_value
+  cat("hr_mean imputed with:", round(hr_mean_value, 2), "\n")
+}
+```
+
+```{r}
+# Impute any other missing values
+for (col in names(data_df)) {
+  if (is.numeric(data_df[[col]]) && sum(is.na(data_df[[col]])) > 0) {
+    data_df[[col]][is.na(data_df[[col]])] <- mean(data_df[[col]], na.rm = TRUE)
+  }
+}
+```
+
+
+```{r}
+cat("\nMissing values after imputation:\n")
+print(colSums(is.na(data_df)))
+```
+
+# ======================================================================
+# TASK 1: EXPLORATORY DATA ANALYSIS
+# =======================================================================
+
+```{r}
+cat("\n=== TASK 1: Exploratory Data Analysis ===\n")
+```
+```{r}
+# Add time index
+data_df$time_index <- 1:nrow(data_df)
+```
+
+```{r}
+# --- 1. TIME SERIES PLOTS ---
+cat("Creating time series plots...\n")
+
+p1 <- ggplot(data_df, aes(x = time_index, y = bg_mean)) +
+  geom_line(color = "darkred", linewidth = 0.5) +
+  labs(title = "Blood Glucose Mean Over Time", 
+       x = "Time Index", y = "BG Mean (mmol/L)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p2 <- ggplot(data_df, aes(x = time_index, y = bg_plus_1)) +
+  geom_line(color = "blue", linewidth = 0.5) +
+  labs(title = "Target: BG +1:00 Over Time", 
+       x = "Time Index", y = "BG +1:00 (mmol/L)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p3 <- ggplot(data_df, aes(x = time_index, y = insulin_sum)) +
+  geom_line(color = "green4", linewidth = 0.5) +
+  labs(title = "Insulin Sum Over Time", 
+       x = "Time Index", y = "Insulin (units)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p4 <- ggplot(data_df, aes(x = time_index, y = carbs_sum)) +
+  geom_line(color = "orange", linewidth = 0.5) +
+  labs(title = "Carbohydrates Sum Over Time", 
+       x = "Time Index", y = "Carbs (g)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p5 <- ggplot(data_df, aes(x = time_index, y = hr_mean)) +
+  geom_line(color = "red", linewidth = 0.5) +
+  labs(title = "Heart Rate Mean Over Time", 
+       x = "Time Index", y = "HR (bpm)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p6 <- ggplot(data_df, aes(x = time_index, y = steps_sum)) +
+  geom_line(color = "purple", linewidth = 0.5) +
+  labs(title = "Steps Sum Over Time", 
+       x = "Time Index", y = "Steps") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+p7 <- ggplot(data_df, aes(x = time_index, y = cals_sum)) +
+  geom_line(color = "brown", linewidth = 0.5) +
+  labs(title = "Calories Sum Over Time", 
+       x = "Time Index", y = "Calories") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+```{r}
+# Display individual plots
+print(p1)
+print(p2)
+print(p3)
+print(p4)
+print(p5)
+print(p6)
+print(p7)
+
+```
+```{r}
+```
+
