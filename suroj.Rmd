@@ -1,5 +1,6 @@
 ```{r}
 install.packages("corrplot")
+install.packages("gridExtra")
 ```
 
 
@@ -141,5 +142,499 @@ print(p7)
 
 ```
 ```{r}
+
+# Combined grid plot
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, ncol = 2)
+```
+
+
+```{r}
+# --- 2. DISTRIBUTION PLOTS ---
+cat("Creating distribution plots...\n")
+
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))
+hist(data_df$bg_mean, main = "Distribution: BG Mean", 
+     xlab = "BG Mean (mmol/L)", col = "lightblue", breaks = 30)
+hist(data_df$insulin_sum, main = "Distribution: Insulin Sum", 
+     xlab = "Insulin (units)", col = "lightgreen", breaks = 30)
+hist(data_df$carbs_sum, main = "Distribution: Carbs Sum", 
+     xlab = "Carbs (g)", col = "lightyellow", breaks = 30)
+hist(data_df$hr_mean, main = "Distribution: HR Mean", 
+     xlab = "Heart Rate (bpm)", col = "lightpink", breaks = 30)
+hist(data_df$steps_sum, main = "Distribution: Steps Sum", 
+     xlab = "Steps", col = "lavender", breaks = 30)
+hist(data_df$cals_sum, main = "Distribution: Cals Sum", 
+     xlab = "Calories", col = "lightcoral", breaks = 30)
+hist(data_df$bg_plus_1, main = "Distribution: BG +1:00", 
+     xlab = "BG +1:00 (mmol/L)", col = "lightcyan", breaks = 30)
+par(mfrow = c(1, 1))
+
+
+```
+
+```{r}
+
+# --- 3. CORRELATION ANALYSIS ---
+cat("Performing correlation analysis...\n")
+
+vars_for_cor <- data_df[, c("bg_mean", "insulin_sum", "carbs_sum", 
+                             "hr_mean", "steps_sum", "cals_sum", "bg_plus_1")]
+
+cor_matrix <- cor(vars_for_cor, use = "complete.obs")
+cat("\nCorrelation Matrix:\n")
+print(round(cor_matrix, 3))
+
+```
+
+```{r}
+# Correlation plot
+corrplot(cor_matrix, method = "color", type = "upper", 
+         addCoef.col = "black", number.cex = 0.7,
+         tl.col = "black", tl.srt = 45,
+         title = "Correlation Matrix of Variables",
+         mar = c(0, 0, 2, 0))
+
+
+```
+```{r}
+getwd()
+
+```
+
+
+```{r}
+
+# --- 4. SCATTER PLOTS ---
+cat("Creating scatter plots...\n")
+
+par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+
+plot(data_df$bg_mean, data_df$bg_plus_1, 
+     main = "BG Mean vs BG +1:00", 
+     xlab = "BG Mean", ylab = "BG +1:00", 
+     col = rgb(0, 0, 1, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ bg_mean, data = data_df), col = "red", lwd = 2)
+
+plot(data_df$insulin_sum, data_df$bg_plus_1, 
+     main = "Insulin Sum vs BG +1:00", 
+     xlab = "Insulin Sum", ylab = "BG +1:00", 
+     col = rgb(0, 1, 0, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ insulin_sum, data = data_df), col = "red", lwd = 2)
+
+plot(data_df$carbs_sum, data_df$bg_plus_1, 
+     main = "Carbs Sum vs BG +1:00", 
+     xlab = "Carbs Sum", ylab = "BG +1:00", 
+     col = rgb(1, 0.5, 0, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ carbs_sum, data = data_df), col = "red", lwd = 2)
+
+plot(data_df$hr_mean, data_df$bg_plus_1, 
+     main = "HR Mean vs BG +1:00", 
+     xlab = "HR Mean", ylab = "BG +1:00", 
+     col = rgb(1, 0, 0, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ hr_mean, data = data_df), col = "red", lwd = 2)
+
+plot(data_df$steps_sum, data_df$bg_plus_1, 
+     main = "Steps Sum vs BG +1:00", 
+     xlab = "Steps Sum", ylab = "BG +1:00", 
+     col = rgb(0.5, 0, 0.5, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ steps_sum, data = data_df), col = "red", lwd = 2)
+
+plot(data_df$cals_sum, data_df$bg_plus_1, 
+     main = "Cals Sum vs BG +1:00", 
+     xlab = "Cals Sum", ylab = "BG +1:00", 
+     col = rgb(0.6, 0.3, 0.1, 0.2), pch = 16, cex = 0.5)
+abline(lm(bg_plus_1 ~ cals_sum, data = data_df), col = "red", lwd = 2)
+
+par(mfrow = c(1, 1))
+
+```
+```{r}
+# Remove duplicates
+initial_rows <- nrow(data_df)
+data_df <- data_df[!duplicated(data_df), ]
+cat("Duplicates removed:", initial_rows - nrow(data_df), "\n")
+
+# Remove negative values (if inappropriate for your data)
+data_df <- subset(data_df,
+                  bg_mean >= 0 & insulin_sum >= 0 & carbs_sum >= 0 &
+                  hr_mean >= 0 & steps_sum >= 0 & cals_sum >= 0 & bg_plus_1 >= 0)
+
+cat("Rows after cleaning:", nrow(data_df), "\n")
+
+```
+```{r}
+
+cat("\n=== TASK 2: Regression Modeling ===\n")
+
+# Rename columns for modeling
+colnames(data_df) <- c("x1", "x2", "x3", "x4", "x5", "x6", "y", "time_index")
+```
+
+```{r}
+
+# --- TASK 2.1: Fit all 5 models ---
+cat("\nTASK 2.1: Estimating model parameters...\n")
+
+m1 <- lm(y ~ I(x1^3) + I(x2^2) + I(x3^2) + x4 + x5 + x6, data = data_df)
+m2 <- lm(y ~ I(x1^2) + I(x2^2) + I(x3^3) + x4 + x5 + x6, data = data_df)
+m3 <- lm(y ~ x1 + x2 + x3 + I(x4^2) + x5 + I(x6^2), data = data_df)
+m4 <- lm(y ~ I(x1^2) + I(x2^2) + I(x3^2) + I(x4^2) + I(x5^2) + I(x6^2), data = data_df)
+m5 <- lm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + I(x1*x2) + I(x3*x4) + I(x2*x6), data = data_df)
+
+models <- list(m1, m2, m3, m4, m5)
+```
+```{r}
+
+# Print coefficients for each model
+for(i in 1:5) {
+  cat("\n--- Model", i, "Coefficients ---\n")
+  print(coef(models[[i]]))
+}
+
+```
+```{r}
+# --- TASK 2.2, 2.3, 2.4: Calculate metrics ---
+cat("\n\nTASK 2.2-2.4: Computing RSS, Log-Likelihood, AIC, BIC...\n")
+
+results <- data.frame(
+  Model = paste0("Model ", 1:5),
+  Parameters = NA,
+  RSS = NA,
+  LogLik = NA,
+  AIC = NA,
+  BIC = NA
+)
+
+for(i in 1:5) {
+  mod <- models[[i]]
+    # Number of parameters (including intercept)
+  results$Parameters[i] <- length(coef(mod))
+  
+  # Task 2.2: RSS
+  results$RSS[i] <- sum(residuals(mod)^2)
+  
+  # Task 2.3: Log-Likelihood
+  n <- nrow(data_df)
+  sigma2 <- results$RSS[i] / n
+  results$LogLik[i] <- -n/2 * log(2*pi) - n/2 * log(sigma2) - results$RSS[i]/(2*sigma2)
+  
+  # Task 2.4: AIC and BIC
+  results$AIC[i] <- AIC(mod)
+  results$BIC[i] <- BIC(mod)
+}
+
+cat("\n=== Model Comparison Table ===\n")
+print(results)
+
+```
+```{r}
+# Identify best models
+best_aic_idx <- which.min(results$AIC)
+best_bic_idx <- which.min(results$BIC)
+
+cat("\n--- TASK 2.6: Model Selection ---\n")
+cat("Best model by AIC: Model", best_aic_idx, "(AIC =", round(results$AIC[best_aic_idx], 2), ")\n")
+cat("Best model by BIC: Model", best_bic_idx, "(BIC =", round(results$BIC[best_bic_idx], 2), ")\n")
+
+best_model <- models[[best_aic_idx]]
+
+```
+```{r}
+
+# --- TASK 2.5: Residual Diagnostics ---
+cat("\n\nTASK 2.5: Residual diagnostics...\n")
+
+```
+
+```{r}
+# Q-Q plots for all models
+par(mfrow = c(2, 3))
+for(i in 1:5) {
+  qqnorm(residuals(models[[i]]), main = paste("Q-Q Plot: Model", i))
+  qqline(residuals(models[[i]]), col = "red", lwd = 2)
+}
+par(mfrow = c(1, 1))
+```
+
+
+```{r}
+# Detailed diagnostics for best model
+cat("\nDetailed diagnostics for best model (Model", best_aic_idx, "):\n")
+
+par(mfrow = c(2, 2))
+plot(best_model, main = paste("Model", best_aic_idx, "Diagnostics"))
+par(mfrow = c(1, 1))
+```
+
+```{r}
+# Residual histogram and Q-Q for best model
+par(mfrow = c(1, 2))
+hist(residuals(best_model), breaks = 50, 
+     main = paste("Residuals: Model", best_aic_idx),
+     xlab = "Residuals", col = "skyblue", freq = FALSE)
+curve(dnorm(x, mean = mean(residuals(best_model)), sd = sd(residuals(best_model))), 
+      add = TRUE, col = "red", lwd = 2)
+
+qqnorm(residuals(best_model), main = paste("Q-Q Plot: Model", best_aic_idx))
+qqline(residuals(best_model), col = "red", lwd = 2)
+par(mfrow = c(1, 1))
+
+```
+
+```{r}
+# Shapiro-Wilk test for normality
+shapiro_test <- shapiro.test(sample(residuals(best_model), min(5000, length(residuals(best_model)))))
+cat("\nShapiro-Wilk normality test p-value:", shapiro_test$p.value, "\n")
+
+
+```
+```{r}
+# --- TASK 2.7: Train-Test Split ---
+cat("\n\nTASK 2.7: Train-Test split and predictions...\n")
+
+set.seed(42)
+n_rows <- nrow(data_df)
+train_ind <- sample(seq_len(n_rows), size = floor(0.7 * n_rows))
+
+train_data <- data_df[train_ind, ]
+test_data <- data_df[-train_ind, ]
+
+cat("Training set size:", nrow(train_data), "\n")
+cat("Test set size:", nrow(test_data), "\n")
+```
+```{r}
+
+# Retrain best model on training data
+final_model <- lm(formula(best_model), data = train_data)
+
+cat("\n--- Model Summary (Training Data) ---\n")
+print(summary(final_model))
+```
+```{r}
+# Predict on test data
+predictions <- predict(final_model, newdata = test_data, 
+                      interval = "confidence", level = 0.95)
+
+```
+
+```{r}
+
+# Calculate test metrics
+test_rss <- sum((test_data$y - predictions[, "fit"])^2)
+test_tss <- sum((test_data$y - mean(test_data$y))^2)
+test_r2 <- 1 - (test_rss / test_tss)
+test_rmse <- sqrt(mean((test_data$y - predictions[, "fit"])^2))
+
+cat("\n--- Test Set Performance ---\n")
+cat("Test RSS:", round(test_rss, 4), "\n")
+cat("Test R-squared:", round(test_r2, 4), "\n")
+cat("Test RMSE:", round(test_rmse, 4), "\n")
+
+```
+```{r}
+# Plot predictions with confidence intervals
+n_plot <- min(100, nrow(test_data))
+plot_idx <- 1:n_plot
+
+par(mar = c(5, 5, 4, 2))
+plot(plot_idx, test_data$y[plot_idx], 
+     pch = 19, col = "black", cex = 0.8,
+     ylim = range(c(test_data$y[plot_idx], predictions[plot_idx, ])),
+     main = paste("Model", best_aic_idx, "- Predictions with 95% Confidence Intervals"),
+     xlab = "Test Sample Index", ylab = "Blood Glucose (mmol/L)")
+lines(plot_idx, predictions[plot_idx, "fit"], col = "blue", lwd = 2)
+lines(plot_idx, predictions[plot_idx, "lwr"], col = "red", lty = 2, lwd = 1.5)
+lines(plot_idx, predictions[plot_idx, "upr"], col = "red", lty = 2, lwd = 1.5)
+legend("topright", 
+       legend = c("Actual", "Predicted", "95% CI"),
+       col = c("black", "blue", "red"),
+       pch = c(19, NA, NA),
+       lty = c(NA, 1, 2),
+       lwd = c(NA, 2, 1.5))
+
+```
+
+```{r}
+# ==============================================================================
+# TASK 3: APPROXIMATE BAYESIAN COMPUTATION (ABC)
+# ==============================================================================
+
+cat("\n\n=== TASK 3: ABC Analysis ===\n")
+
+```
+```{r}
+# Get coefficients
+coefs <- coef(final_model)
+cat("\nModel Coefficients:\n")
+print(round(coefs, 6))
+
+```
+```{r}
+# Find 2 parameters with largest absolute values (exclude intercept)
+coef_abs <- abs(coefs[-1])
+top_2_idx <- order(coef_abs, decreasing = TRUE)[1:2]
+param_names <- names(coefs[-1])[top_2_idx]
+param_values <- coefs[-1][top_2_idx]
+
+cat("\n--- Two Parameters with Largest Absolute Values ---\n")
+cat(param_names[1], "=", round(param_values[1], 6), "\n")
+cat(param_names[2], "=", round(param_values[2], 6), "\n")
+
+```
+
+```{r}
+# ABC setup
+n_sims <- 10000
+epsilon <- sum(residuals(best_model)^2) * 1.05
+```
+
+```{r}
+
+# Prior ranges (±20% around estimates)
+beta1_est <- param_values[1]
+beta2_est <- param_values[2]
+beta1_range <- c(beta1_est * 0.8, beta1_est * 1.2)
+beta2_range <- c(beta2_est * 0.8, beta2_est * 1.2)
+
+cat("\nABC Parameters:\n")
+cat("Number of simulations:", n_sims, "\n")
+cat("Epsilon threshold:", round(epsilon, 2), "\n")
+cat("Prior range for", param_names[1], ":", round(beta1_range, 6), "\n")
+cat("Prior range for", param_names[2], ":", round(beta2_range, 6), "\n")
+
+```
+```{r}
+# Storage for accepted parameters
+accepted_b1 <- c()
+accepted_b2 <- c()
+
+```
+
+```{r}
+
+# Get baseline prediction
+y_pred_base <- predict(best_model, newdata = data_df)
+
+```
+```{r}
+
+# Progress bar
+cat("\nRunning ABC simulations...\n")
+pb <- txtProgressBar(min = 0, max = n_sims, style = 3)
+
+for(i in 1:n_sims) {
+  # Sample from prior
+  b1_cand <- runif(1, min = beta1_range[1], max = beta1_range[2])
+  b2_cand <- runif(1, min = beta2_range[1], max = beta2_range[2])
+  
+  # Calculate contribution change
+  # Extract the variable from parameter name (remove I(), ^, *, etc.)
+  var1_name <- gsub("I\\(|\\)|\\^[0-9]|\\*.*", "", param_names[1])
+  var2_name <- gsub("I\\(|\\)|\\^[0-9]|\\*.*", "", param_names[2])
+  
+  # Check if it's an interaction term
+  if(grepl("\\*", param_names[1])) {
+    vars1 <- strsplit(gsub("I\\(|\\)", "", param_names[1]), "\\*")[[1]]
+    term1 <- data_df[[vars1[1]]] * data_df[[vars1[2]]]
+  } else if(grepl("\\^", param_names[1])) {
+    power <- as.numeric(gsub(".*\\^", "", param_names[1]))
+    term1 <- data_df[[var1_name]]^power
+  } else {
+    term1 <- data_df[[var1_name]]
+  }
+  
+  if(grepl("\\*", param_names[2])) {
+    vars2 <- strsplit(gsub("I\\(|\\)", "", param_names[2]), "\\*")[[1]]
+    term2 <- data_df[[vars2[1]]] * data_df[[vars2[2]]]
+  } else if(grepl("\\^", param_names[2])) {
+    power <- as.numeric(gsub(".*\\^", "", param_names[2]))
+    term2 <- data_df[[var2_name]]^power
+  } else {
+    term2 <- data_df[[var2_name]]
+  }
+  
+  # Simulate predictions
+  delta <- (b1_cand - beta1_est) * term1 + (b2_cand - beta2_est) * term2
+  y_sim <- y_pred_base + delta
+  
+  # Calculate RSS
+  rss_sim <- sum((data_df$y - y_sim)^2)
+  
+  # Accept if close to observed
+  if(rss_sim < epsilon) {
+    accepted_b1 <- c(accepted_b1, b1_cand)
+    accepted_b2 <- c(accepted_b2, b2_cand)
+  }
+  
+  setTxtProgressBar(pb, i)
+}
+close(pb)
+
+cat("\n\nAccepted samples:", length(accepted_b1), "\n")
+cat("Acceptance rate:", round(length(accepted_b1) / n_sims * 100, 2), "%\n")
+```
+```{r}
+
+# Plot posteriors
+if(length(accepted_b1) > 0) {
+  
+  cat("\n--- Posterior Statistics ---\n")
+  cat(param_names[1], ":\n")
+  cat("  Mean:", round(mean(accepted_b1), 6), "\n")
+  cat("  Median:", round(median(accepted_b1), 6), "\n")
+  cat("  95% CI:", round(quantile(accepted_b1, c(0.025, 0.975)), 6), "\n")
+  
+  cat(param_names[2], ":\n")
+  cat("  Mean:", round(mean(accepted_b2), 6), "\n")
+  cat("  Median:", round(median(accepted_b2), 6), "\n")
+  cat("  95% CI:", round(quantile(accepted_b2, c(0.025, 0.975)), 6), "\n")
+  
+  # Plot posteriors
+  par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
+  
+  # Marginal posterior 1
+  hist(accepted_b1, breaks = 30, col = "skyblue",
+       main = paste("Posterior Distribution:", param_names[1]),
+       xlab = param_names[1], freq = FALSE)
+  abline(v = beta1_est, col = "red", lwd = 2, lty = 2)
+  abline(v = mean(accepted_b1), col = "blue", lwd = 2)
+  legend("topright", legend = c("LS Estimate", "Posterior Mean"), 
+         col = c("red", "blue"), lty = c(2, 1), lwd = 2, cex = 0.8)
+  
+  # Marginal posterior 2
+  hist(accepted_b2, breaks = 30, col = "lightgreen",
+       main = paste("Posterior Distribution:", param_names[2]),
+       xlab = param_names[2], freq = FALSE)
+  abline(v = beta2_est, col = "red", lwd = 2, lty = 2)
+  abline(v = mean(accepted_b2), col = "blue", lwd = 2)
+  legend("topright", legend = c("LS Estimate", "Posterior Mean"), 
+         col = c("red", "blue"), lty = c(2, 1), lwd = 2, cex = 0.8)
+  
+  # Joint posterior (scatter)
+  plot(accepted_b1, accepted_b2,
+       pch = 16, cex = 0.5, col = rgb(0, 0, 1, 0.3),
+       main = "Joint Posterior Distribution",
+       xlab = param_names[1],
+       ylab = param_names[2])
+  points(beta1_est, beta2_est, pch = 4, col = "red", cex = 2, lwd = 3)
+  legend("topright", legend = "LS Estimate", 
+         col = "red", pch = 4, cex = 1.5, lwd = 3)
+  
+  # Joint posterior (density)
+  smoothScatter(accepted_b1, accepted_b2,
+                main = "Joint Posterior Density",
+                xlab = param_names[1],
+                ylab = param_names[2])
+  points(beta1_est, beta2_est, pch = 4, col = "red", cex = 2, lwd = 3)
+  
+  par(mfrow = c(1, 1))
+  
+} else {
+  cat("\nWarning: No parameters accepted!\n")
+  cat("Try increasing epsilon or adjusting prior ranges.\n")
+}
+
+cat("\n=== Analysis Complete ===\n")
+```
 ```
 
